@@ -1,0 +1,77 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "final_space": true,
+  "blocks": [
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "type": "path",
+          "style": "diamond",
+          "foreground": "#ffafd2",
+          "leading_diamond": " <#ff70a6>\ue200</>",
+          "properties": {
+            "folder_icon": "..",
+            "folder_separator_icon": "\uf9e0",
+            "home_icon": "~",
+            "style": "agnoster_short",
+            "max_depth": 3
+          },
+          "template": " {{ .Path }} "
+          
+        },
+        {
+          "type": "git",
+          "style": "diamond",
+          "foreground": "#b979ee",
+          "properties": {
+            "branch_icon": "\ue725 ",
+            "fetch_stash_count": true,
+            "fetch_status": true,
+            "fetch_upstream_icon": true,
+            "fetch_worktree_count": true
+          },
+          "template": "{{ if .UpstreamIcon }}{{ .HEAD }}{{ .BranchStatus }}{{ if .Working.Changed }} \uF044 {{ .Working.String }}{{ end }}{{ if and (.Staging.Changed) (.Working.Changed) }} |{{ end }}{{ if .Staging.Changed }} \uF046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0}} \uF692 {{ .StashCount }}{{ end }}{{ if gt .WorktreeCount 0}} \uf1bb {{ .WorktreeCount }}{{ end }}{{ else }}<#f5b25a>{{ .HEAD }}{{ .BranchStatus }}{{ if .Working.Changed }} \uF044 {{ .Working.String }}{{ end }}{{ if and (.Staging.Changed) (.Working.Changed) }} |{{ end }}{{ if .Staging.Changed }} \uF046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0}} \uF692 {{ .StashCount }}{{ end }}{{ if gt .WorktreeCount 0}} \uf1bb {{ .WorktreeCount }}{{ end }}</>{{ end }}"
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "foreground": "#6beb92",
+          "properties": {
+            "display_mode": "environment",
+            "fetch_version": false,
+            "fetch_virtual_env": true,
+            "home_enabled": true
+          },
+          "style": "diamond",
+          "template": " \ue235 {{ if .Error }}{{ .Error }}{{ else }}{{ if .Venv }}{{ .Venv }}{{ end }}{{ .Full }}{{ end }}",
+          "type": "python"
+        },
+        {
+          "foreground": "#00c7fc",
+          "properties": {
+            "always_enabled": true
+          },
+          "style": "diamond",
+          "template":"{{ if gt .Code 0 }} <#ff70a6>\ue285</>{{ else }} \ue285{{ end }}",
+          "type": "exit"
+        }
+      ]
+    }
+  ],
+  "console_title_template": "{{ .Folder }}",
+  "osc99": true,
+  "transient_prompt": {
+    "background": "transparent",
+    "foreground": "#FEF5ED",
+    "template": "\ue285 "
+  },
+  "version": 2
+}
