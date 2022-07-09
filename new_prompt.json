@@ -10,22 +10,22 @@
         {
           "type": "path",
           "style": "diamond",
-          "foreground": "#ffafd2",
+          "foreground": "#71bfec",
           "leading_diamond": " <#ff70a6>\ue200</>",
           "properties": {
-            "folder_icon": "..",
-            "folder_separator_icon": "\uf9e0",
-            "home_icon": "~",
             "style": "agnoster_short",
             "max_depth": 3
           },
-          "template": " {{ .Path }} "
+          "template": " {{ .Path }}"
           
         },
         {
           "type": "git",
           "style": "diamond",
-          "foreground": "#b979ee",
+          "foreground": "#f5b25a",
+          "foreground_templates": [
+            "{{ if .UpstreamIcon }}#b979ee{{ end }}"
+          ],
           "properties": {
             "branch_icon": "\ue725 ",
             "fetch_stash_count": true,
@@ -33,7 +33,26 @@
             "fetch_upstream_icon": true,
             "fetch_worktree_count": true
           },
-          "template": "{{ if .UpstreamIcon }}{{ .HEAD }}{{ .BranchStatus }}{{ if .Working.Changed }} \uF044 {{ .Working.String }}{{ end }}{{ if and (.Staging.Changed) (.Working.Changed) }} |{{ end }}{{ if .Staging.Changed }} \uF046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0}} \uF692 {{ .StashCount }}{{ end }}{{ if gt .WorktreeCount 0}} \uf1bb {{ .WorktreeCount }}{{ end }}{{ else }}<#f5b25a>{{ .HEAD }}{{ .BranchStatus }}{{ if .Working.Changed }} \uF044 {{ .Working.String }}{{ end }}{{ if and (.Staging.Changed) (.Working.Changed) }} |{{ end }}{{ if .Staging.Changed }} \uF046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0}} \uF692 {{ .StashCount }}{{ end }}{{ if gt .WorktreeCount 0}} \uf1bb {{ .WorktreeCount }}{{ end }}</>{{ end }}"
+          "template": " {{ .HEAD }}{{ .BranchStatus }}{{ if .Working.Changed }} \uF044 {{ .Working.String }}{{ end }}{{ if and (.Staging.Changed) (.Working.Changed) }} |{{ end }}{{ if .Staging.Changed }} \uF046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0}} \uF692 {{ .StashCount }}{{ end }}{{ if gt .WorktreeCount 0}} \uf1bb {{ .WorktreeCount }}{{ end }}"
+        },
+        {
+          "type": "wifi",
+          "style": "diamond",
+          "foreground": "#61e694",
+          "foreground_templates": [
+            "{{ if (lt .Signal 60) }}#f58073{{ else if (lt .Signal 90) }}#f5c373{{ else }}#69f0b6{{ end }}"
+          ],
+          "template": " \uFAA8{{ .Signal }}%"
+        },
+        {
+          "type": "executiontime",
+          "style": "diamond",
+          "foreground": "#f394c8",
+          "properties": {
+            "threshold": 500,
+            "style": "austin"
+          },
+          "template": " {{ .FormattedMs }}"
         }
       ]
     },
@@ -43,24 +62,24 @@
       "newline": true,
       "segments": [
         {
+          "type": "python",
+          "style": "diamond",
           "foreground": "#6beb92",
           "properties": {
-            "display_mode": "environment",
-            "fetch_version": false,
-            "fetch_virtual_env": true,
             "home_enabled": true
           },
-          "style": "diamond",
-          "template": " \ue235 {{ if .Error }}{{ .Error }}{{ else }}{{ if .Venv }}{{ .Venv }}{{ end }}{{ .Full }}{{ end }}",
-          "type": "python"
+          "template": " \ue235 {{ if .Error }}{{ .Error }}{{ else }}{{ if .Venv }}{{ .Venv }} {{ end }}{{ .Major }}.{{ .Minor }}{{ end }}"
         },
         {
           "foreground": "#00c7fc",
+          "foreground_templates": [
+            "{{ if gt .Code 0 }}#ff70a6{{ end }}"
+          ],
           "properties": {
             "always_enabled": true
           },
           "style": "diamond",
-          "template":"{{ if gt .Code 0 }} <#ff70a6>\ue285</>{{ else }} \ue285{{ end }}",
+          "template":" \ue285",
           "type": "exit"
         }
       ]
