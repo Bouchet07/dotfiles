@@ -11,7 +11,7 @@
           "type": "path",
           "style": "diamond",
           "foreground": "#71bfec",
-          "leading_diamond": " <#bf74d6>\ue200</>",
+          "leading_diamond": " <#ff70a6>\ue200</>",
           "properties": {
             "style": "agnoster_short",
             "max_depth": 3
@@ -76,12 +76,10 @@
       ]
     }
   ],
-  "console_title_template": "{{ .Folder }}",
-  "osc99": true,
-  "transient_prompt": {
+
+  "secondary_prompt": {
     "background": "transparent",
-    "foreground": "#bf74d6",
-    "template": "\ue285 "
-  },
-  "version": 2
+    "foreground": "#ffffff",
+    "template": "-> "
+  }
 }
