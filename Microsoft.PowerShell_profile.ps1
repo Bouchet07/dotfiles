@@ -1,6 +1,8 @@
 #region conda initialize
 # !! Contents within this block are managed by 'conda init' !!
-(& "C:\Users\diego\miniconda3\Scripts\conda.exe" "shell.powershell" "hook") | Out-String | Invoke-Expression
+#If (Test-Path "C:\Users\diego\miniconda3\Scripts\conda.exe") {
+#    (& "C:\Users\diego\miniconda3\Scripts\conda.exe" "shell.powershell" "hook") | Out-String | ?{$_} | Invoke-Expression
+#}
 #endregion
 
 # Oh-my-posh
@@ -13,8 +15,8 @@ Import-Module -Name Terminal-Icons
 Invoke-Expression (& { (zoxide init powershell --cmd cd| Out-String) })
 
 # UTF-8 encoding
-$OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding =
-                    New-Object System.Text.UTF8Encoding
+#$OutputEncoding = [Console]::InputEncoding = [Console]::OutputEncoding =
+#                    New-Object System.Text.UTF8Encoding
 # Functions
 Function time{
 	$Command = "$args"

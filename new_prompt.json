@@ -1,87 +1,90 @@
 {
   "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
-  "final_space": true,
+  "transient_prompt": {
+    "template": "\ue285 ",
+    "foreground": "#bf74d6",
+    "background": "transparent"
+  },
+  "console_title_template": "{{ .Folder }}",
   "blocks": [
     {
       "type": "prompt",
       "alignment": "left",
-      "newline": true,
       "segments": [
         {
-          "type": "path",
-          "style": "diamond",
-          "foreground": "#71bfec",
-          "leading_diamond": " <#bf74d6>\ue200</>",
           "properties": {
-            "style": "agnoster_short",
-            "max_depth": 3
+            "cache_duration": "none",
+            "max_depth": 3,
+            "style": "agnoster_short"
           },
-          "template": " {{ .Path }}"
-          
+          "leading_diamond": " <#bf74d6>\ue200</>",
+          "template": " {{ .Path }}",
+          "foreground": "#71bfec",
+          "type": "path",
+          "style": "diamond"
         },
         {
-          "type": "git",
-          "style": "diamond",
-          "foreground": "#f5b25a",
-          "foreground_templates": [
-            "{{ if .UpstreamIcon }}#b979ee{{ end }}"
-          ],
           "properties": {
             "branch_icon": "\ue725 ",
+            "cache_duration": "none",
             "fetch_stash_count": true,
             "fetch_status": true,
             "fetch_upstream_icon": true,
             "fetch_worktree_count": true
           },
-          "template": " {{ .HEAD }}{{ .BranchStatus }}{{ if .Working.Changed }} \uF044 {{ .Working.String }}{{ end }}{{ if and (.Staging.Changed) (.Working.Changed) }} |{{ end }}{{ if .Staging.Changed }} \uF046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0}} \uF692 {{ .StashCount }}{{ end }}{{ if gt .WorktreeCount 0}} \uf1bb {{ .WorktreeCount }}{{ end }}"
+          "template": " {{ .HEAD }}{{ .BranchStatus }}{{ if .Working.Changed }} \uf044 {{ .Working.String }}{{ end }}{{ if and (.Staging.Changed) (.Working.Changed) }} |{{ end }}{{ if .Staging.Changed }} \uf046 {{ .Staging.String }}{{ end }}{{ if gt .StashCount 0}} \uf692 {{ .StashCount }}{{ end }}{{ if gt .WorktreeCount 0}} \uf1bb {{ .WorktreeCount }}{{ end }}",
+          "foreground": "#f5b25a",
+          "type": "git",
+          "style": "diamond",
+          "foreground_templates": [
+            "{{ if .UpstreamIcon }}#b979ee{{ end }}"
+          ]
         },
         {
-          "type": "executiontime",
-          "style": "diamond",
-          "foreground": "#f394c8",
           "properties": {
-            "threshold": 500,
-            "style": "austin"
+            "cache_duration": "none",
+            "style": "austin",
+            "threshold": 500
           },
-          "template": " {{ .FormattedMs }}"
+          "template": " {{ .FormattedMs }}",
+          "foreground": "#f394c8",
+          "type": "executiontime",
+          "style": "diamond"
         }
-      ]
+      ],
+      "newline": true
     },
     {
       "type": "prompt",
       "alignment": "left",
-      "newline": true,
       "segments": [
         {
-          "type": "python",
-          "style": "diamond",
-          "foreground": "#6beb92",
           "properties": {
+            "cache_duration": "none",
             "home_enabled": true
           },
-          "template": " \ue235 {{ if .Error }}{{ .Error }}{{ else }}{{ if .Venv }}{{ .Venv }} {{ end }}{{ .Major }}.{{ .Minor }}{{ end }}"
+          "template": " \ue235 {{ if .Error }}{{ .Error }}{{ else }}{{ if .Venv }}{{ .Venv }} {{ end }}{{ .Major }}.{{ .Minor }}{{ end }}",
+          "foreground": "#6beb92",
+          "type": "python",
+          "style": "diamond"
         },
         {
-          "type": "status",
+          "properties": {
+            "always_enabled": true,
+            "cache_duration": "none"
+          },
+          "template": " \ue285",
           "foreground": "#00c7fc",
+          "type": "status",
+          "style": "diamond",
           "foreground_templates": [
             "{{ if gt .Code 0 }}#ff70a6{{ end }}"
-          ],
-          "properties": {
-            "always_enabled": true
-          },
-          "style": "diamond",
-          "template":" \ue285"
+          ]
         }
-      ]
+      ],
+      "newline": true
     }
   ],
-  "console_title_template": "{{ .Folder }}",
-  "osc99": true,
-  "transient_prompt": {
-    "background": "transparent",
-    "foreground": "#bf74d6",
-    "template": "\ue285 "
-  },
-  "version": 2
+  "version": 3,
+  "final_space": true
 }
