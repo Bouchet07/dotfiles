@@ -1,9 +1,11 @@
-#region conda initialize
 # !! Contents within this block are managed by 'conda init' !!
 #If (Test-Path "C:\Users\diego\miniconda3\Scripts\conda.exe") {
 #    (& "C:\Users\diego\miniconda3\Scripts\conda.exe" "shell.powershell" "hook") | Out-String | ?{$_} | Invoke-Expression
 #}
 #endregion
+
+(& uv generate-shell-completion powershell) | Out-String | Invoke-Expression
+(& uvx --generate-shell-completion powershell) | Out-String | Invoke-Expression
 
 # Oh-my-posh
 oh-my-posh --init --shell pwsh --config ~\Desktop\dotfiles\new_prompt.json | Invoke-Expression
@@ -31,3 +33,5 @@ Function ntime{
 New-Alias aff3ct C:\Users\diego\Desktop\toolbox\build_windows_gcc_x64_avx2\bin\aff3ct-3.0.2.exe
 New-Alias stockfish C:\Users\diego\Desktop\Programming\chess\stockfish_14.1_win_x64_avx2\stockfish_14.1_win_x64_avx2.exe
 New-Alias vlc "C:\Program Files\VideoLAN\VLC\vlc.exe"
+New-Alias uvg "C:\Users\diego\Desktop\env\.venv\Scripts\activate.ps1"
+
