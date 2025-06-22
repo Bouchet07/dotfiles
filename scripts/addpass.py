@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-FILE_PATH = Path("dotfiles/files/overthewire.txt")
+FILE_PATH = Path(__file__).parent / "../files/overthewire.txt"
 
 def get_next_level(file_path):
     if not file_path.exists():
@@ -29,6 +29,21 @@ def add_password(password):
     print(f"Added: level {level}: {password}")
 
 if __name__ == "__main__":
+    # If no password, use clipboard content
+    if len(sys.argv) == 1:
+        try:
+            import pyperclip
+            password = pyperclip.paste()
+        except ImportError:
+            # try using termux-clipboard if pyperclip is not available
+            try:
+                import subprocess
+                password = subprocess.check_output(["termux-clipboard-get"], text=True).strip()
+            except Exception as e:
+                print(f"Error: {e}")
+                sys.exit(1)
+            print("Error: pyperclip module not found. Please install it to use clipboard functionality.")
+            sys.exit(1)
     if len(sys.argv) != 2:
         print("Usage: python addpass.py <password>")
         sys.exit(1)
