@@ -1,52 +1,69 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
+import subprocess
 from pathlib import Path
 
-FILE_PATH = Path(__file__).parent / "../files/overthewire.txt"
+FILE_PATH = (Path(__file__).parent / "../files/overthewire.txt").resolve()
 
 def get_next_level(file_path):
+    """Return the next level number based on the last line in the file."""
     if not file_path.exists():
         print(f"Error: File not found: {file_path}")
         sys.exit(1)
 
     with file_path.open("r") as f:
-        lines = f.readlines()
-        if not lines:
-            return 0
-        last_line = lines[-1]
-        try:
-            last_level = int(last_line.split()[1].rstrip(":"))
-            return last_level + 1
-        except (IndexError, ValueError):
-            print("Error: Couldn't parse last level number.")
-            sys.exit(1)
+        lines = [line.strip() for line in f if line.strip()]  # skip blank lines
+
+    if not lines:
+        return 0
+
+    last_line = lines[-1]
+    try:
+        # Expected format: level X: password
+        level_str = last_line.split()[1].rstrip(":")
+        return int(level_str) + 1
+    except (IndexError, ValueError):
+        print("Error: Couldn't parse last level number.")
+        sys.exit(1)
+
+def get_clipboard_password():
+    """Try to get clipboard content via pyperclip or termux-clipboard-get."""
+    try:
+        import pyperclip
+        return pyperclip.paste().strip()
+    except ImportError:
+        pass  # Try termux fallback
+
+    try:
+        result = subprocess.check_output(["termux-clipboard-get"], text=True).strip()
+        return result
+    except Exception:
+        print("Error: Could not read from clipboard. Install `pyperclip` or use `termux-clipboard-get`.")
+        sys.exit(1)
 
 def add_password(password):
+    """Append the new level/password to the file."""
     level = get_next_level(FILE_PATH)
     with FILE_PATH.open("a") as f:
         f.write(f"level {level}: {password}\n")
-    print(f"Added: level {level}: {password}")
+    print(f"✅ Added: level {level}: {password}")
 
-if __name__ == "__main__":
-    # If no password, use clipboard content
+def main():
     if len(sys.argv) == 1:
-        try:
-            import pyperclip
-            password = pyperclip.paste()
-        except ImportError:
-            # try using termux-clipboard if pyperclip is not available
-            try:
-                import subprocess
-                password = subprocess.check_output(["termux-clipboard-get"], text=True).strip()
-            except Exception as e:
-                print(f"Error: {e}")
-                sys.exit(1)
-            print("Error: pyperclip module not found. Please install it to use clipboard functionality.")
-            sys.exit(1)
-    if len(sys.argv) != 2:
-        print("Usage: python addpass.py <password>")
+        password = get_clipboard_password()
+    elif len(sys.argv) == 2:
+        password = sys.argv[1]
+    else:
+        print("Usage:\n  python addpass.py <password>\n  python addpass.py    # to use clipboard")
         sys.exit(1)
 
-    password = sys.argv[1]
+    if not password:
+        print("Error: Password is empty.")
+        sys.exit(1)
+
     add_password(password)
+
+if __name__ == "__main__":
+    main()
+
