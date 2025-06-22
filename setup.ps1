@@ -214,5 +214,30 @@ if (-not $caskaydiaFonts) {
     }
 }
 
+#Test if Terminal-Icons module is installed, if not install it
+if (-not (Get-Module -ListAvailable -Name Terminal-Icons)) {
+    Write-Host "🔍 Terminal-Icons module not found. Installing..."
+    try {
+        Install-Module -Name Terminal-Icons -Repository PSGallery -Force -Scope CurrentUser -ErrorAction Stop
+        Write-Host "✅ Terminal-Icons module installed successfully."
+    } catch {
+        Write-Host "❌ Failed to install Terminal-Icons module: $_" -ForegroundColor Red
+    }
+} else {
+    Write-Host "✅ Terminal-Icons module is already installed."
+}
 
+# add scripts to PATH
+$scriptPath = "$HOME\Desktop\dotfiles\scripts"
+if (-not $env:PATH.Contains($scriptPath)) {
+    Write-Host "🔗 Adding scripts directory to PATH..."
+    try {
+        [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$scriptPath", [System.EnvironmentVariableTarget]::User)
+        Write-Host "✅ Scripts directory added to PATH successfully."
+    } catch {
+        Write-Host "❌ Failed to add scripts directory to PATH: $_" -ForegroundColor Red
+    }
+} else {
+    Write-Host "✅ Scripts directory is already in PATH."
+}
 
