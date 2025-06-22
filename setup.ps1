@@ -25,7 +25,7 @@ $packages = @(
 
 # Serial installation of packages
 if ($noinstall) {
-    Write-Host "Skipping installation of packages as requested."
+    Write-Host "-> Skipping installation of packages as requested."
 } else {
     Write-Host "Starting installation of packages..."
     foreach ($pkg in $packages) {
