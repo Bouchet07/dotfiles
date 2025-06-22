@@ -5,16 +5,14 @@ import subprocess
 from pathlib import Path
 
 import pexpect
-
-from utils import get_clipboard_password, get_next_level
+from utils import get_clipboard_password, get_next_level, get_last_password
 
 FILE_PATH = (Path(__file__).parent / "../files/overthewire.txt").resolve()
 ADDPASS_SCRIPT = (Path(__file__).parent / "addpass.py").resolve()
 HOST = "bandit.labs.overthewire.org"
 PORT = "2220"
 
-
-def add_password_via_script(password):
+def add_password(password):
     try:
         subprocess.run(["python3", str(ADDPASS_SCRIPT), password], check=True)
     except subprocess.CalledProcessError as e:
@@ -31,7 +29,7 @@ def ssh_login(level, password):
     try:
         child.expect("password:", timeout=10)
         child.sendline(password)
-        child.interact()  # hands control to the user
+        child.interact()
     except pexpect.exceptions.TIMEOUT:
         print("❌ Timed out waiting for password prompt.")
         child.close()
@@ -42,9 +40,20 @@ def ssh_login(level, password):
         sys.exit(1)
 
 def main():
-    password = get_clipboard_password()
-    level = get_next_level(FILE_PATH)
-    add_password_via_script(password)
+    if len(sys.argv) != 2 or sys.argv[1] not in ("add", "copy"):
+        print("Usage: next.py [add|copy]")
+        sys.exit(1)
+
+    mode = sys.argv[1]
+
+    if mode == "add":
+        password = get_clipboard_password()
+        level = get_next_level(FILE_PATH)
+        add_password(password)
+    else:  # mode == "copy"
+        password = get_last_password(FILE_PATH)
+        level = get_next_level(FILE_PATH) - 1
+
     ssh_login(level, password)
 
 if __name__ == "__main__":
