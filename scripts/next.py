@@ -4,7 +4,12 @@ import sys
 import subprocess
 from pathlib import Path
 
-import pexpect
+import platform
+if platform.system() == "Windows":
+    import wexpect as pexpect
+else:
+    import pexpect
+    
 from utils import get_clipboard_password, get_next_level, get_last_password
 
 FILE_PATH = (Path(__file__).parent / "../files/overthewire.txt").resolve()
