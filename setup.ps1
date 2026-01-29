@@ -25,7 +25,7 @@ $packages = @(
 
 # Serial installation of packages
 if ($noinstall) {
-    Write-Host "Skipping installation of packages as requested."
+    Write-Host "-> Skipping installation of packages as requested."
 } else {
     Write-Host "Starting installation of packages..."
     foreach ($pkg in $packages) {
@@ -109,7 +109,7 @@ if (-not (Test-Path -Path $envPath)) {
         Write-Host "❌ No uv package found in WinGet packages."
     }
 } else {
-    Write-Host "ℹ️ Environment directory already exists at $envPath. Skipping uv initialization."
+    Write-Host "ℹ️  Environment directory already exists at $envPath. Skipping uv initialization."
 }
 
 
@@ -213,6 +213,62 @@ if (-not $caskaydiaFonts) {
         Write-Host "  - $($font.Name)"
     }
 }
+
+#Test if Terminal-Icons module is installed, if not install it
+if (-not (Get-Module -ListAvailable -Name Terminal-Icons)) {
+    Write-Host "🔍 Terminal-Icons module not found. Installing..."
+    try {
+        Install-Module -Name Terminal-Icons -Repository PSGallery -Force -Scope CurrentUser -ErrorAction Stop
+        Write-Host "✅ Terminal-Icons module installed successfully."
+    } catch {
+        Write-Host "❌ Failed to install Terminal-Icons module: $_" -ForegroundColor Red
+    }
+} else {
+    Write-Host "✅ Terminal-Icons module is already installed."
+}
+
+# add scripts to PATH
+$scriptPath = "$HOME\Desktop\dotfiles\scripts"
+$pathEntries = $env:PATH -split ';'
+if (-not ($pathEntries -contains $scriptPath)) {
+    Write-Host "🔗 Adding scripts directory to PATH..."
+    try {
+        [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$scriptPath", [System.EnvironmentVariableTarget]::User)
+        Write-Host "✅ Scripts directory added to PATH successfully."
+    } catch {
+        Write-Host "❌ Failed to add scripts directory to PATH: $_" -ForegroundColor Red
+    }
+} else {
+    Write-Host "✅ Scripts directory is already in PATH."
+}
+
+
+
+# Associate .py files with python.exe from uv environment
+$pythonPath = Join-Path $envPath ".venv\Scripts\python.exe"
+if (Test-Path $pythonPath) {
+    try {
+        $progId = "CustomPythonFile"
+        $command = "`"$pythonPath`" `"%1`" %*"
+
+        # 1. Define our custom ProgId
+        $progIdPath = "HKCU:\Software\Classes\$progId\shell\open\command"
+        New-Item -Path $progIdPath -Force | Out-Null
+        Set-ItemProperty -Path $progIdPath -Name "(default)" -Value $command
+
+        # 2. Associate .py extension with our custom ProgId
+        $extPath = "HKCU:\Software\Classes\.py"
+        New-Item -Path $extPath -Force | Out-Null
+        Set-ItemProperty -Path $extPath -Name "(default)" -Value $progId
+
+        Write-Host "✅ .py files are now associated with $pythonPath."
+    } catch {
+        Write-Host "❌ Failed to associate .py files: $_" -ForegroundColor Red
+    }
+} else {
+    Write-Host "❌ python.exe not found in uv environment at $pythonPath"
+}
+
 
 
 
