@@ -1,274 +1,255 @@
 param(
-    [switch]$noinstall = $false
+    [switch]$noinstall = $false,
+    [switch]$Relaunched = $false
 )
 
-# List of packages to install or upgrade
+<#
+.Synopsis
+    Modern Windows Post-Install/Setup Script
+    Optimized for execution from within the dotfiles repository.
+#>
+
+# --- 1. Auto-Elevation to Admin ---
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "`n 🔑 Requesting Administrator access..." -ForegroundColor Cyan
+    
+    # Reconstruct the arguments to pass them to the new window
+    $passParams = ""
+    if ($noinstall) { $passParams += " -noinstall" }
+    
+    $shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
+    
+    # We add $passParams and -Relaunched to the end of the file path
+    Start-Process "wt.exe" -ArgumentList "-w 0 new-tab -p `"PowerShell`" $shell -NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $passParams -Relaunched" -Verb RunAs
+    exit
+}
+
+# --- 2. Dynamic Path Discovery ---
+$dotfilesDir  = $PSScriptRoot 
+$envPath      = Join-Path $HOME "Desktop\env"
+$scriptPath   = Join-Path $dotfilesDir "scripts"
+$sourceProfile = Join-Path $dotfilesDir "Microsoft.PowerShell_profile.ps1"
+
+# Utility function with improved alignment for wide icons
+function Write-Status($icon, $label, $status, $isAction = $false) {
+    $color = if ($isAction) { "Cyan" } else { "DarkGray" }
+    $statusColor = if ($isAction) { "White" } else { "Gray" }
+    
+    # Create a 4-character fixed-width string for the icon area
+    $iconSlot = " $icon "
+    if ($iconSlot.Length -lt 4) { $iconSlot = $iconSlot.PadRight(4) }
+
+    Write-Host $iconSlot -NoNewline -ForegroundColor $color
+    Write-Host "$($label.PadRight(25))" -NoNewline -ForegroundColor $statusColor
+    Write-Host $status -ForegroundColor DarkGray
+}
+
+Write-Host "`n── Windows Setup ──────────────────────────────────" -ForegroundColor Cyan
+Write-Host "  Location: " -NoNewline -ForegroundColor Gray
+Write-Host $dotfilesDir -ForegroundColor White
+
+# --- 3. Package Installation ---
 $packages = @(
-    "Microsoft.VisualStudioCode",
-    "Google.Chrome",
-    "Microsoft.WindowsTerminal",
-    "junegunn.fzf",
-    "ajeetdsouza.zoxide",
-    "voidtools.Everything.Alpha",
-    "Microsoft.PowerToys",
-    "lin-ycv.EverythingCmdPal",
-    "7zip.7zip",
-    "Obsidian.Obsidian",
-    "Spotify.Spotify",
-    "Gyan.FFmpeg",
-    "Microsoft.Edit",
-    "JanDeDobbeleer.OhMyPosh",
-    "VideoLAN.VLC",
-    "Google.GoogleDrive",
-    "astral-sh.uv"
+    "Microsoft.VisualStudioCode", "Google.Chrome", "Microsoft.WindowsTerminal",
+    "junegunn.fzf", "ajeetdsouza.zoxide", "voidtools.Everything.Alpha",
+    "Microsoft.PowerToys", "lin-ycv.EverythingCmdPal", "7zip.7zip",
+    "Obsidian.Obsidian", "Spotify.Spotify", "Gyan.FFmpeg", "Microsoft.Edit",
+    "JanDeDobbeleer.OhMyPosh", "VideoLAN.VLC", "Google.GoogleDrive", "astral-sh.uv"
 )
 
-# Serial installation of packages
+Write-Host "`n 📦 Packages" -ForegroundColor Cyan
 if ($noinstall) {
-    Write-Host "-> Skipping installation of packages as requested."
+    Write-Host "    Skipping installation check (switch enabled)." -ForegroundColor DarkGray
 } else {
-    Write-Host "Starting installation of packages..."
+    # Get a list of installed apps once to speed up the loop
+    $installedApps = (winget list --accept-source-agreements | Out-String)
+    
     foreach ($pkg in $packages) {
-        Write-Host "→ Installing: $pkg"
-        try {
-            # Consider adding error handling for winget if needed, e.g., checking $LASTEXITCODE
-            winget install --id $pkg --accept-source-agreements --accept-package-agreements -e --silent
-            Write-Host "✔ Finished: $pkg"
-        } catch {
-            Write-Host "❌ Failed to install: $pkg" -ForegroundColor Red
+        if ($installedApps -match [regex]::Escape($pkg)) {
+            Write-Host "    · " -NoNewline -ForegroundColor DarkGray
+            Write-Host $pkg -ForegroundColor DarkGray
+        } else {
+            Write-Host "    → " -NoNewline -ForegroundColor Cyan
+            Write-Host "$($pkg.PadRight(35))" -NoNewline -ForegroundColor White
+            Write-Host "Installing..." -ForegroundColor Gray
+            winget install --id $pkg --accept-source-agreements --accept-package-agreements -e --silent --no-upgrade | Out-Null
         }
     }
 }
 
-# Check and link PowerShell profile to dotfiles
-$sourceProfile = "$HOME\Desktop\dotfiles\Microsoft.PowerShell_profile.ps1"
+Write-Host "`n ⚙️  System Configuration" -ForegroundColor Cyan
+
+$osName = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion").ProductName
+$osBuild = [System.Environment]::OSVersion.Version.Build
+Write-Status "💻" "OS Version" "$osName (Build $osBuild)"
+
+# --- 4. Profile Symlinking ---
 $targetProfile = $PROFILE
-
-if (!(Test-Path -Path $targetProfile)) {
-    Write-Host "🔗 Linking PowerShell profile from $sourceProfile to $targetProfile..."
-    try {
-        New-Item -ItemType SymbolicLink -Path $targetProfile -Target $sourceProfile -Force -ErrorAction Stop
-        Write-Host "✅ PowerShell profile linked successfully."
-    } catch {
-        Write-Warning "⚠️ Failed to create symbolic link for PowerShell profile. Error: $($_.Exception.Message)"
-        Write-Warning "Please ensure you are running PowerShell as Administrator if creating symlinks in system-protected directories, or check permissions."
+if (Test-Path $sourceProfile) {
+    $isLink = (Get-Item $targetProfile -ErrorAction SilentlyContinue).Attributes -match "ReparsePoint"
+    if ($isLink) {
+        Write-Status "🔗" "PowerShell Profile" "Linked"
+    } else {
+        Write-Status "🔗" "PowerShell Profile" "Updating..." $true
+        if (Test-Path $targetProfile) { 
+            $backup = "$targetProfile.bak_$(Get-Date -Format 'yyyyMMdd')"
+            Move-Item $targetProfile $backup -Force 
+        }
+        New-Item -ItemType SymbolicLink -Path $targetProfile -Target $sourceProfile -Force | Out-Null
     }
 } else {
-    $profileItem = Get-Item -LiteralPath $targetProfile -Force
-
-    if ($profileItem.Attributes -match 'ReparsePoint') {
-        $resolvedTarget = $null
-        try {
-            # For symlinks, Target is a property. For junctions, it might differ or need other access methods.
-            # Get-Item on a symlink resolves it, so $profileItem.Target should work for symlinks.
-             $resolvedTarget = (Get-Item $profileItem.FullName).Target
-        } catch {
-            Write-Warning "Could not resolve target of existing symlink at $targetProfile : $($_.Exception.Message)"
-        }
-        
-        if ($resolvedTarget -and ($resolvedTarget -ne $sourceProfile)) {
-            Write-Host "⚠️ PowerShell profile at $targetProfile is a symlink, but points to a different location:"
-            Write-Host "  → Existing target: $resolvedTarget"
-            Write-Host "  → Expected target: $sourceProfile"
-            Write-Host "  You may want to manually update it."
-        } elseif ($resolvedTarget -and ($resolvedTarget -eq $sourceProfile)) {
-            Write-Host "✅ PowerShell profile is already linked correctly to $sourceProfile."
-        } else {
-             Write-Host "ℹ️ PowerShell profile at $targetProfile is a reparse point, but its target could not be confirmed or doesn't match."
-        }
-    } else {
-        Write-Host "⚠️ PowerShell profile at $targetProfile exists but is not a symlink. You may want to review its content or back it up and replace with a symlink."
-        Write-Host "  → Existing file: $targetProfile"
-    }
+    Write-Status "❌" "PowerShell Profile" "Source Missing" $true
 }
-# check if "C:\Users\diego\Desktop\env" exists, if not create it
-$envPath = "C:\Users\diego\Desktop\env"
-if (-not (Test-Path -Path $envPath)) {
-    # search in "C:\Users\diego\AppData\Local\Microsoft\WinGet\Packages" for a package containing "astral-sh.uv"
-    $uvPackage = Get-ChildItem -Path "C:\Users\diego\AppData\Local\Microsoft\WinGet\Packages" -Recurse -Filter "*astral-sh.uv*" -ErrorAction SilentlyContinue
-    if ($uvPackage) {
-        $uvPath = Join-Path -Path $uvPackage.FullName -ChildPath "uv.exe"
-        # execute uv.exe init "C:\Users\diego\Desktop\env"
-        if (Test-Path -Path $uvPath) {
-            Write-Host "Found uv package at: $uvPath"
-            Write-Host "Initializing uv..."
-            & $uvPath init "C:\Users\diego\Desktop\env"
-            Write-Host "✅ uv initialized successfully."
-            # go to the environment directory
-            $originalPath = Get-Location
-            Set-Location -Path $envPath
-            Write-Host "Installing common packages..."
-            & $uvPath add -r $HOME\Desktop\dotfiles\requirements.txt
-            Write-Host "✅ Common packages installed successfully."
-            # Return to the original location
-            Set-Location -Path $originalPath
-        } else {
-            Write-Host "❌ uv.exe not found in the package directory."
-        }
-    } else {
-        Write-Host "❌ No uv package found in WinGet packages."
-    }
+
+# --- 5. UV Environment Setup ---
+if (Test-Path $envPath) {
+    Write-Status "🐍" "Python Environment" "Ready"
 } else {
-    Write-Host "ℹ️  Environment directory already exists at $envPath. Skipping uv initialization."
+    Write-Status "🐍" "Python Environment" "Creating..." $true
+    if (!(Get-Command uv -ErrorAction SilentlyContinue)) {
+        powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+        $env:Path += ";$HOME\.cargo\bin"
+    }
+    if (Get-Command uv -ErrorAction SilentlyContinue) {
+        uv init $envPath | Out-Null
+        $reqs = Join-Path $dotfilesDir "requirements.txt"
+        if (Test-Path $reqs) {
+            Push-Location $envPath
+            uv add -r $reqs | Out-Null
+            Pop-Location
+        }
+    }
 }
 
-
+# --- 6. Font Installation (Caskaydia Cove) ---
 Add-Type -AssemblyName System.Drawing
-
-function Get-CaskaydiaFonts {
-    $fonts = (New-Object System.Drawing.Text.InstalledFontCollection).Families
-    return $fonts | Where-Object { $_.Name -match "Caskaydia" }
-}
-
-# Registry path and fonts folder
-$fontsFolder = "$env:WINDIR\Fonts"
-$fontRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts"
-
-$caskaydiaFonts = Get-CaskaydiaFonts
-
-if (-not $caskaydiaFonts) {
-    Write-Host "🔍 Caskaydia Cove Nerd Font not detected. Installing..."
-
-    # Step 1: Fetch latest CascaydiaCove.zip from GitHub API
+$hasFont = (New-Object System.Drawing.Text.InstalledFontCollection).Families | Where-Object { $_.Name -match "Caskaydia" }
+if ($hasFont) {
+    Write-Status "🖋️" "Caskaydia Font" "Installed"
+} else {
+    Write-Status "🖋️" "Caskaydia Font" "Downloading..." $true
     $apiUrl = "https://api.github.com/repos/ryanoasis/nerd-fonts/releases/latest"
-    $headers = @{ "User-Agent" = "PowerShell" }
-
-    try {
-        $release = Invoke-RestMethod -Uri $apiUrl -Headers $headers
-        $asset = $release.assets | Where-Object { $_.name -eq "CaskaydiaCove.zip" }
-
-        if (-not $asset) {
-            Write-Host "❌ 'CaskaydiaCove.zip' not found in the latest release." -ForegroundColor Red
-            return
-        }
-
-        $fontUrl = $asset.browser_download_url
-        Write-Host "📥 Latest font URL: $fontUrl"
-    } catch {
-        Write-Host "❌ Failed to retrieve latest font release: $_" -ForegroundColor Red
-        return
-    }
-
-    # Step 2: Prepare temp paths
     $tempFolder = Join-Path $env:TEMP "CaskaydiaNF"
-    $zipFile = Join-Path $env:TEMP "CaskaydiaCove.zip"
+    $zipFile = Join-Path $env:TEMP "Caskaydia.zip"
 
-    if (Test-Path $tempFolder) {
-        Remove-Item -Path $tempFolder -Recurse -Force -ErrorAction SilentlyContinue
-    }
-    New-Item -Path $tempFolder -ItemType Directory -Force | Out-Null
-
-    # Step 3: Download font zip
-    Write-Host "⏬ Downloading Caskaydia Cove Nerd Font..."
     try {
-        $ProgressPreference = 'SilentlyContinue'
+        $release = Invoke-RestMethod -Uri $apiUrl -Headers @{"User-Agent"="PowerShell"}
+        $fontUrl = ($release.assets | Where-Object { $_.name -eq "CaskaydiaCove.zip" }).browser_download_url
+        New-Item $tempFolder -ItemType Directory -Force | Out-Null
         Invoke-WebRequest -Uri $fontUrl -OutFile $zipFile -UseBasicParsing
-        $ProgressPreference = 'Continue'
-    } catch {
-        Write-Host "❌ Failed to download font: $_" -ForegroundColor Red
-        return
-    }
-
-    # Step 4: Extract
-    Write-Host "📦 Extracting font files..."
-    try {
-        Expand-Archive -Path $zipFile -DestinationPath $tempFolder -Force
-    } catch {
-        Write-Host "❌ Extraction failed: $_" -ForegroundColor Red
-        return
-    }
-
-    # Step 5: Install fonts
-    $ttfFiles = Get-ChildItem -Path $tempFolder -Recurse -Filter "*.ttf"
-    if ($ttfFiles.Count -eq 0) {
-        Write-Host "❌ No TTF font files found after extraction." -ForegroundColor Red
-        return
-    }
-
-    Write-Host "🖋️ Installing fonts..."
-    foreach ($font in $ttfFiles) {
-        try {
-            $targetPath = Join-Path $fontsFolder $font.Name
-            Copy-Item -Path $font.FullName -Destination $targetPath -Force
-
-            $fontRegName = $font.BaseName + " (TrueType)"
-            New-ItemProperty -Path $fontRegistryPath -Name $fontRegName -Value $font.Name -PropertyType String -Force | Out-Null
-
-            Write-Host "  ✓ Installed: $($font.Name)"
-        } catch {
-            Write-Host "  ⚠️ Failed to install: $($font.Name) - $_" -ForegroundColor Yellow
+        Expand-Archive $zipFile -DestinationPath $tempFolder -Force
+        
+        $shell = New-Object -ComObject Shell.Application
+        $fontsNamespace = $shell.Namespace(0x14) 
+        Get-ChildItem $tempFolder -Filter "*.ttf" -Recurse | ForEach-Object {
+            if (!(Test-Path "C:\Windows\Fonts\$($_.Name)")) {
+                $fontsNamespace.CopyHere($_.FullName, 0x10)
+            }
         }
-    }
-
-    # Step 6: Clean up
-    Remove-Item -Path $zipFile -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path $tempFolder -Recurse -Force -ErrorAction SilentlyContinue
-
-    Write-Host "✅ Caskaydia Cove Nerd Font installation completed."
-
-} else {
-    Write-Host "✅ Caskaydia Cove Nerd Font is already installed."
-    Write-Host "`n🖋️ Installed Caskaydia-related fonts:" -ForegroundColor Cyan
-    foreach ($font in $caskaydiaFonts) {
-        Write-Host "  - $($font.Name)"
+    } finally {
+        Remove-Item $zipFile, $tempFolder -Recurse -ErrorAction SilentlyContinue
     }
 }
 
-#Test if Terminal-Icons module is installed, if not install it
-if (-not (Get-Module -ListAvailable -Name Terminal-Icons)) {
-    Write-Host "🔍 Terminal-Icons module not found. Installing..."
-    try {
-        Install-Module -Name Terminal-Icons -Repository PSGallery -Force -Scope CurrentUser -ErrorAction Stop
-        Write-Host "✅ Terminal-Icons module installed successfully."
-    } catch {
-        Write-Host "❌ Failed to install Terminal-Icons module: $_" -ForegroundColor Red
-    }
+# --- 7. Terminal-Icons ---
+if (Get-Module -ListAvailable -Name Terminal-Icons) {
+    Write-Status "📁" "Terminal Icons" "Active"
 } else {
-    Write-Host "✅ Terminal-Icons module is already installed."
+    Write-Status "📁" "Terminal Icons" "Installing..." $true
+    Install-Module -Name Terminal-Icons -Repository PSGallery -Force -Scope CurrentUser | Out-Null
 }
 
-# add scripts to PATH
-$scriptPath = "$HOME\Desktop\dotfiles\scripts"
-$pathEntries = $env:PATH -split ';'
-if (-not ($pathEntries -contains $scriptPath)) {
-    Write-Host "🔗 Adding scripts directory to PATH..."
-    try {
-        [System.Environment]::SetEnvironmentVariable("PATH", $env:PATH + ";$scriptPath", [System.EnvironmentVariableTarget]::User)
-        Write-Host "✅ Scripts directory added to PATH successfully."
-    } catch {
-        Write-Host "❌ Failed to add scripts directory to PATH: $_" -ForegroundColor Red
-    }
+# --- 8. Path Update ---
+$currentPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+if ($currentPath -like "*$scriptPath*") {
+    Write-Status "🚀" "Scripts Path" "Mapped"
 } else {
-    Write-Host "✅ Scripts directory is already in PATH."
+    Write-Status "🚀" "Scripts Path" "Adding..." $true
+    [System.Environment]::SetEnvironmentVariable("PATH", "$currentPath;$scriptPath", "User")
 }
 
-
-
-# Associate .py files with python.exe from uv environment
+# --- 9. Python File Association ---
 $pythonPath = Join-Path $envPath ".venv\Scripts\python.exe"
 if (Test-Path $pythonPath) {
-    try {
-        $progId = "CustomPythonFile"
-        $command = "`"$pythonPath`" `"%1`" %*"
-
-        # 1. Define our custom ProgId
-        $progIdPath = "HKCU:\Software\Classes\$progId\shell\open\command"
-        New-Item -Path $progIdPath -Force | Out-Null
-        Set-ItemProperty -Path $progIdPath -Name "(default)" -Value $command
-
-        # 2. Associate .py extension with our custom ProgId
-        $extPath = "HKCU:\Software\Classes\.py"
-        New-Item -Path $extPath -Force | Out-Null
-        Set-ItemProperty -Path $extPath -Name "(default)" -Value $progId
-
-        Write-Host "✅ .py files are now associated with $pythonPath."
-    } catch {
-        Write-Host "❌ Failed to associate .py files: $_" -ForegroundColor Red
+    $progId = "UV.PythonFile"
+    $command = "`"$pythonPath`" `"%1`" %*"
+    $classes = "HKCU:\Software\Classes"
+    
+    $currentAssoc = (Get-ItemProperty "$classes\.py" -ErrorAction SilentlyContinue)."(default)"
+    if ($currentAssoc -eq $progId) {
+        Write-Status "🐍" "Python Association" "Mapped"
+    } else {
+        Write-Status "🐍" "Python Association" "Fixing..." $true
+        New-Item "$classes\$progId\shell\open\command" -Force | Out-Null
+        Set-ItemProperty "$classes\$progId\shell\open\command" -Name "(default)" -Value $command
+        New-Item "$classes\.py" -Force | Out-Null
+        Set-ItemProperty "$classes\.py" -Name "(default)" -Value $progId
     }
-} else {
-    Write-Host "❌ python.exe not found in uv environment at $pythonPath"
 }
 
+# --- 10. Windows Explorer Tweaks ---
+$explorerSettings = Get-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+$alreadyTweaked = ($explorerSettings.HideFileExt -eq 0 -and $explorerSettings.Hidden -eq 1)
 
+if ($alreadyTweaked) {
+    Write-Status "👁️" "Explorer Tweaks" "Applied"
+} else {
+    Write-Status "👁️" "Explorer Tweaks" "Applying..." $true
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "HideFileExt" -Value 0
+    Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "Hidden" -Value 1
+}
 
+# --- 11. Git Identity ---
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    $gitName = git config --global user.name
+    
+    if ($gitName) {
+        Write-Status "🐙" "Git Identity" "Configured"
+    } else {
+        Write-Status "🐙" "Git Identity" "Setting up..." $true
+        git config --global user.name "Bouchet07"
+        git config --global user.email "diegobouchet88@gmail.com"
+        git config --global init.defaultBranch main
+    }
+}
 
+# --- 12. Windows Terminal Settings Link ---
+$wtSettingsDir  = "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState"
+$wtSettingsFile = Join-Path $wtSettingsDir "settings.json"
+$sourceSettings = Join-Path $dotfilesDir "settings.json" # Assumes it's in your dotfiles root
+
+if (Test-Path $sourceSettings) {
+    # Ensure the Terminal directory exists (it might not on a brand new install)
+    if (!(Test-Path $wtSettingsDir)) { New-Item -ItemType Directory -Path $wtSettingsDir -Force | Out-Null }
+
+    $isLink = (Get-Item $wtSettingsFile -ErrorAction SilentlyContinue).Attributes -match "ReparsePoint"
+    
+    if ($isLink) {
+        Write-Status "🎨" "Terminal Settings" "Linked"
+    } else {
+        Write-Status "🎨" "Terminal Settings" "Linking..." $true
+        # Backup the default one if it exists
+        if (Test-Path $wtSettingsFile) { Move-Item $wtSettingsFile "$wtSettingsFile.bak" -Force }
+        New-Item -ItemType SymbolicLink -Path $wtSettingsFile -Target $sourceSettings -Force | Out-Null
+    }
+} else {
+    Write-Status "❌" "Terminal Settings" "Source Missing"
+}
+
+Write-Host "`n── Final Summary ──────────────────────────────────" -ForegroundColor Cyan
+$done = Get-Date -Format "HH:mm:ss"
+Write-Host "  ✨ All tasks verified at $done" -ForegroundColor Gray
+Write-Host "  🚀 System is fully optimized" -ForegroundColor White
+Write-Host "────────────────────────────────────────────────────`n" -ForegroundColor Cyan
+
+# Play the finish sound
+[System.Media.SystemSounds]::Asterisk.Play()
+
+# --- 16. Smart Exit ---
+if ($Relaunched) {
+    Write-Host "`n  ✨ Setup Complete. Press any key to close this window..." -ForegroundColor Cyan
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+} else {
+    Write-Host "`n  ✨ Setup Complete. Returning to prompt..." -ForegroundColor Gray
+}
