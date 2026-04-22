@@ -36,4 +36,3 @@ New-Alias aff3ct C:\Users\diego\Desktop\toolbox\build_windows_gcc_x64_avx2\bin\a
 New-Alias stockfish C:\Users\diego\Desktop\Programming\chess\stockfish_14.1_win_x64_avx2\stockfish_14.1_win_x64_avx2.exe
 New-Alias vlc "C:\Program Files\VideoLAN\VLC\vlc.exe"
 New-Alias uvg "C:\Users\diego\Desktop\env\.venv\Scripts\activate.ps1"
-
