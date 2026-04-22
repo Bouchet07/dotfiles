@@ -23,12 +23,34 @@ Function ntime{
 	Measure-Command {Invoke-Expression $command}
 }
 function whisper {
-    param([string]$archivo)
-    # Cambia las rutas de abajo por las reales en tu PC
-    $exe = "C:\Users\diego\Desktop\Programming\c++\whisper.cpp\build\bin\whisper-cli.exe"
-    $model = "C:\Users\diego\Desktop\Programming\c++\whisper.cpp\models\ggml-base.bin"
+    param(
+        [Parameter(Mandatory=$true)][string]$archivo,
+        [Parameter(Mandatory=$false)][string]$idioma = "es"
+    )
     
-    & $exe -m $model -f $archivo -otxt -osrt
+    $basePath = "C:\Users\diego\Desktop\Programming\c++\whisper.cpp"
+    $exe = "$basePath\build\bin\whisper-cli.exe"
+    $model = "$basePath\models\ggml-base.bin"
+    
+    $ext = [System.IO.Path]::GetExtension($archivo).ToLower()
+    $archivoFinal = $archivo
+    $esTemporal = $false
+
+    # Conversión si es necesario
+    if ($ext -notmatch "\.(wav|flac|mp3|ogg)") {
+        Write-Host "--- Convirtiendo a WAV (16kHz)... ---" -ForegroundColor Cyan
+        $archivoFinal = "$archivo.temp.wav"
+        ffmpeg -i $archivo -ar 16000 -ac 1 -c:a pcm_s16le $archivoFinal -y -loglevel error
+        $esTemporal = $true
+    }
+
+    # Ejecución con el parámetro de idioma (-l)
+    & $exe -m $model -f $archivoFinal -l $idioma -otxt -osrt -t 8
+
+    if ($esTemporal) {
+        Remove-Item $archivoFinal
+        Write-Host "--- Finalizado. ---" -ForegroundColor Green
+    }
 }
 
 #alias
