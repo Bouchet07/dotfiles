@@ -55,7 +55,8 @@ $packages = @(
     "junegunn.fzf", "ajeetdsouza.zoxide", "voidtools.Everything.Alpha",
     "Microsoft.PowerToys", "lin-ycv.EverythingCmdPal", "7zip.7zip",
     "Obsidian.Obsidian", "Spotify.Spotify", "Gyan.FFmpeg", "Microsoft.Edit",
-    "JanDeDobbeleer.OhMyPosh", "VideoLAN.VLC", "Google.GoogleDrive", "astral-sh.uv"
+    "JanDeDobbeleer.OhMyPosh", "VideoLAN.VLC", "Google.GoogleDrive", "astral-sh.uv",
+    "JAMSoftware.TreeSize.Free", "HandBrake.HandBrake"
 )
 
 Write-Host "`n 📦 Packages" -ForegroundColor Cyan

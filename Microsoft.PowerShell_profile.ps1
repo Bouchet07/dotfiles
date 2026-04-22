@@ -22,6 +22,14 @@ Function ntime{
 	$Command = "$args"
 	Measure-Command {Invoke-Expression $command}
 }
+function whisper {
+    param([string]$archivo)
+    # Cambia las rutas de abajo por las reales en tu PC
+    $exe = "C:\Users\diego\Desktop\Programming\c++\whisper.cpp\build\bin\whisper-cli.exe"
+    $model = "C:\Users\diego\Desktop\Programming\c++\whisper.cpp\models\ggml-base.bin"
+    
+    & $exe -m $model -f $archivo -otxt -osrt
+}
 
 #alias
 New-Alias aff3ct C:\Users\diego\Desktop\toolbox\build_windows_gcc_x64_avx2\bin\aff3ct-3.0.2.exe
