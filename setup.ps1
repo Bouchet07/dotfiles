@@ -55,7 +55,8 @@ $packages = @(
     "junegunn.fzf", "ajeetdsouza.zoxide", "voidtools.Everything.Alpha",
     "Microsoft.PowerToys", "lin-ycv.EverythingCmdPal", "7zip.7zip",
     "Obsidian.Obsidian", "Spotify.Spotify", "Gyan.FFmpeg", "Microsoft.Edit",
-    "JanDeDobbeleer.OhMyPosh", "VideoLAN.VLC", "Google.GoogleDrive", "astral-sh.uv"
+    "JanDeDobbeleer.OhMyPosh", "VideoLAN.VLC", "Google.GoogleDrive", "astral-sh.uv",
+    "zyedidia.micro"
 )
 
 Write-Host "`n 📦 Packages" -ForegroundColor Cyan
@@ -236,6 +237,50 @@ if (Test-Path $sourceSettings) {
 } else {
     Write-Status "❌" "Terminal Settings" "Source Missing"
 }
+
+# --- 13. Micro Editor Setup ---
+$microConfigDir  = Join-Path $HOME ".config\micro"
+$microThemesDir  = Join-Path $microConfigDir "colorschemes"
+
+$targetThemeFile = Join-Path $microThemesDir "material-transparent.micro"
+$sourceThemeFile = Join-Path $dotfilesDir "material-transparent.micro"
+
+$targetMicroSettings = Join-Path $microConfigDir "settings.json"
+$sourceMicroSettings = Join-Path $dotfilesDir "micro-settings.json"
+
+# Ensure the Micro directories exist
+if (!(Test-Path $microThemesDir)) { New-Item -ItemType Directory -Path $microThemesDir -Force | Out-Null }
+
+# Link the Theme File
+if (Test-Path $sourceThemeFile) {
+	    $isLink = (Get-Item $targetThemeFile -ErrorAction SilentlyContinue).Attributes -match "ReparsePoint"
+    
+    if ($isLink) {
+	        Write-Status "��" "Micro Theme" "Linked"
+    } else {
+	        Write-Status "��" "Micro Theme" "Linking..." $true
+        if (Test-Path $targetThemeFile) { Move-Item $targetThemeFile "$targetThemeFile.bak" -Force }
+        New-Item -ItemType SymbolicLink -Path $targetThemeFile -Target $sourceThemeFile -Force | Out-Null
+    }
+} else {
+	    Write-Status "❌" "Micro Theme" "Source Missing" $true
+}
+
+# Link the Settings File (Applies the theme automatically)
+if (Test-Path $sourceMicroSettings) {
+	    $isLink = (Get-Item $targetMicroSettings -ErrorAction SilentlyContinue).Attributes -match "ReparsePoint"
+    
+    if ($isLink) {
+	        Write-Status "⚙️" "Micro Settings" "Linked"
+    } else {
+	        Write-Status "⚙️" "Micro Settings" "Linking..." $true
+        if (Test-Path $targetMicroSettings) { Move-Item $targetMicroSettings "$targetMicroSettings.bak" -Force }
+        New-Item -ItemType SymbolicLink -Path $targetMicroSettings -Target $sourceMicroSettings -Force | Out-Null
+    }
+} else {
+	    Write-Status "❌" "Micro Settings" "Source Missing" $true
+}
+
 
 Write-Host "`n── Final Summary ──────────────────────────────────" -ForegroundColor Cyan
 $done = Get-Date -Format "HH:mm:ss"
