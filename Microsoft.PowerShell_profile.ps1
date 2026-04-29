@@ -22,23 +22,34 @@ Function ntime{
 	$Command = "$args"
 	Measure-Command {Invoke-Expression $command}
 }
-Function bot{
-	Set-Location "C:\Users\diego\Desktop\Programming\python\chess-auto-bot"
-	$Command = "uv run src\gui.py"
-	Invoke-Expression $command
-}
+function whisper {
+    param(
+        [Parameter(Mandatory=$true)][string]$archivo,
+        [Parameter(Mandatory=$false)][string]$idioma = "es"
+    )
+    
+    $basePath = "C:\Users\diego\Desktop\Programming\c++\whisper.cpp"
+    $exe = "$basePath\build\bin\whisper-cli.exe"
+    $model = "$basePath\models\ggml-base.bin"
+    
+    $ext = [System.IO.Path]::GetExtension($archivo).ToLower()
+    $archivoFinal = $archivo
+    $esTemporal = $false
 
-function Clean-Clipboard {
-    # 1. Get the content as a raw string.
-    # This reads the text only, ignoring HTML/RTF formatting.
-    $content = Get-Clipboard -Raw
+    # Conversión si es necesario
+    if ($ext -notmatch "\.(wav|flac|mp3|ogg)") {
+        Write-Host "--- Convirtiendo a WAV (16kHz)... ---" -ForegroundColor Cyan
+        $archivoFinal = "$archivo.temp.wav"
+        ffmpeg -i $archivo -ar 16000 -ac 1 -c:a pcm_s16le $archivoFinal -y -loglevel error
+        $esTemporal = $true
+    }
 
-    # 2. Check if clipboard is empty to avoid errors
-    if ($null -ne $content) {
-        # 3. Set the text back to clipboard.
-        # This effectively strips the "Rich Text" metadata.
-        Set-Clipboard -Value $content
-        Write-Host "Clipboard stripped of formatting." -ForegroundColor Green
+    # Ejecución con el parámetro de idioma (-l)
+    & $exe -m $model -f $archivoFinal -l $idioma -otxt -osrt -t 8
+
+    if ($esTemporal) {
+        Remove-Item $archivoFinal
+        Write-Host "--- Finalizado. ---" -ForegroundColor Green
     }
 }
 
@@ -47,7 +58,3 @@ New-Alias aff3ct C:\Users\diego\Desktop\toolbox\build_windows_gcc_x64_avx2\bin\a
 New-Alias stockfish C:\Users\diego\Desktop\Programming\chess\stockfish_14.1_win_x64_avx2\stockfish_14.1_win_x64_avx2.exe
 New-Alias vlc "C:\Program Files\VideoLAN\VLC\vlc.exe"
 New-Alias uvg "C:\Users\diego\Desktop\env\.venv\Scripts\activate.ps1"
-New-Alias python "C:\Users\diego\Desktop\env\.venv\Scripts\python.exe"
-New-Alias -Name fix-copy -Value Clean-Clipboard
-
-
