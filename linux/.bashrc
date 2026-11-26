@@ -137,6 +137,7 @@ clip() {
 # Added by Antigravity CLI installer
 export PATH="/home/bio/dbouchet/.local/bin:$PATH"
 alias agyd='agy --dangerously-skip-permissions'
+alias lg='lazygit'
 
 # Flush command history after every command so all tmux windows share history immediately
 PROMPT_COMMAND="history -a${PROMPT_COMMAND:+; $PROMPT_COMMAND}"

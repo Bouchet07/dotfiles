@@ -31,6 +31,25 @@ printf "\n ${cyan}Packages (~/.local/bin)${reset}\n"
 if [ "$NO_INSTALL" -eq 1 ]; then
   printf "    ${gray}Skipping package check (--no-install).${reset}\n"
 else
+  # Ensure Git >= 2.35 (needed by lazygit & modern git features on older distros like Ubuntu 20.04)
+  cur_git_ver="$(git --version 2>/dev/null | awk '{print $3}' || echo "0.0.0")"
+  need_git=0
+  if [ "$UPDATE_TOOLS" -eq 1 ]; then
+    need_git=1
+  elif [ "$(printf '%s\n' "2.35.0" "$cur_git_ver" | sort -V | head -n1)" != "2.35.0" ]; then
+    need_git=1
+  fi
+  if [ "$need_git" -eq 1 ]; then
+    printf "    ${cyan}→${reset} ${white}%-12s${reset} ${gray}installing prebuilt modern git (replacing %s)...${reset}\n" "git" "$cur_git_ver"
+    tmp_mm="$(mktemp -d)"
+    curl -fsSL https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xj -C "$tmp_mm" --strip-components=1 bin/micromamba
+    "$tmp_mm/micromamba" create -y -q -r "$tmp_mm/root" -p "$HOME/.local/share/git-standalone" -c conda-forge git ca-certificates >/dev/null
+    ln -sf "$HOME/.local/share/git-standalone/bin/git" "$HOME/.local/bin/git"
+    rm -rf "$tmp_mm"
+  else
+    printf "    ${gray}· %-12s already modern (%s)${reset}\n" "git" "$cur_git_ver"
+  fi
+
   UPDATE_TOOLS="$UPDATE_TOOLS" python3 - <<'EOF'
 import os, shutil, tarfile, tempfile, urllib.request
 
@@ -46,7 +65,10 @@ specs = [
     ("junegunn/fzf",       lambda t: f"https://github.com/junegunn/fzf/releases/download/{t}/fzf-{t.lstrip('v')}-linux_amd64.tar.gz", "fzf"),
     ("BurntSushi/ripgrep", lambda t: f"https://github.com/BurntSushi/ripgrep/releases/download/{t}/ripgrep-{t}-x86_64-unknown-linux-musl.tar.gz", "rg"),
     ("sharkdp/fd",         lambda t: f"https://github.com/sharkdp/fd/releases/download/{t}/fd-{t}-x86_64-unknown-linux-musl.tar.gz", "fd"),
-    ("ajeetdsouza/zoxide", lambda t: f"https://github.com/ajeetdsouza/zoxide/releases/download/{t}/zoxide-{t.lstrip('v')}-x86_64-unknown-linux-musl.tar.gz", "zoxide"),
+    ("ajeetdsouza/zoxide",    lambda t: f"https://github.com/ajeetdsouza/zoxide/releases/download/{t}/zoxide-{t.lstrip('v')}-x86_64-unknown-linux-musl.tar.gz", "zoxide"),
+    ("cli/cli",               lambda t: f"https://github.com/cli/cli/releases/download/{t}/gh_{t.lstrip('v')}_linux_amd64.tar.gz", "gh"),
+    ("dandavison/delta",      lambda t: f"https://github.com/dandavison/delta/releases/download/{t}/delta-{t}-x86_64-unknown-linux-musl.tar.gz", "delta"),
+    ("jesseduffield/lazygit", lambda t: f"https://github.com/jesseduffield/lazygit/releases/download/{t}/lazygit_{t.lstrip('v')}_linux_x86_64.tar.gz", "lazygit"),
 ]
 
 with tempfile.TemporaryDirectory() as tmp:
@@ -88,9 +110,11 @@ link_file() {
   printf "    ${cyan}→${reset} ${white}%-24s${reset} ${gray}-> %s${reset}\n" "${dst/#$HOME/\~}" "${src/#$HOME/\~}"
 }
 
-link_file "$DOTFILES_LINUX/.tmux.conf" "$HOME/.tmux.conf"
-link_file "$DOTFILES_LINUX/.bashrc"    "$HOME/.bashrc"
-link_file "$DOTFILES_LINUX/.inputrc"   "$HOME/.inputrc"
-link_file "$DOTFILES_LINUX/tsetup"     "$HOME/utils/tsetup"
+link_file "$DOTFILES_LINUX/.tmux.conf"         "$HOME/.tmux.conf"
+link_file "$DOTFILES_LINUX/.bashrc"            "$HOME/.bashrc"
+link_file "$DOTFILES_LINUX/.inputrc"           "$HOME/.inputrc"
+link_file "$DOTFILES_LINUX/.gitconfig"         "$HOME/.gitconfig"
+link_file "$DOTFILES_LINUX/lazygit-config.yml" "$HOME/.config/lazygit/config.yml"
+link_file "$DOTFILES_LINUX/tsetup"             "$HOME/utils/tsetup"
 
 printf "\n ${cyan}Done.${reset}\n"
