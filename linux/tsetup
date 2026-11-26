@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Bootstrap or attach to the paired (shell + agy) tmux workspace on Hermes 2.
+set -euo pipefail
+
+SESSION="${1:-w}"
+AGY_CMD="agy --dangerously-skip-permissions"
+
+if tmux has-session -t "$SESSION" 2>/dev/null; then
+  if [ -n "${TMUX:-}" ]; then
+    exec tmux switch-client -t "$SESSION"
+  else
+    exec tmux attach-session -t "$SESSION"
+  fi
+fi
+
+PAIRS=(
+  "bench:/home/bio/dbouchet/bench-xecg"
+  "cpc:/home/bio/dbouchet/cpc-12lead-ecg"
+  "hermes:/home/bio/dbouchet/utils/hermes-tools"
+  "~:/home/bio/dbouchet"
+)
+
+first=1
+win_idx=1
+for entry in "${PAIRS[@]}"; do
+  name="${entry%%:*}"
+  dir="${entry#*:}"
+
+  if [ "$first" -eq 1 ]; then
+    tmux new-session -d -s "$SESSION" -n "$name" -c "$dir"
+    first=0
+  else
+    tmux new-window -t "${SESSION}:${win_idx}" -n "$name" -c "$dir"
+  fi
+  tmux set-window-option -t "${SESSION}:${win_idx}" automatic-rename off
+
+  agy_idx=$((win_idx + 1))
+  tmux new-window -t "${SESSION}:${agy_idx}" -c "$dir"
+  tmux rename-window -t "${SESSION}:${agy_idx}" ""
+  tmux set-window-option -t "${SESSION}:${agy_idx}" automatic-rename off
+  tmux send-keys -t "${SESSION}:${agy_idx}" "$AGY_CMD" C-m
+
+  win_idx=$((win_idx + 2))
+done
+
+tmux select-window -t "${SESSION}:1"
+
+if [ -n "${TMUX:-}" ]; then
+  exec tmux switch-client -t "$SESSION"
+else
+  exec tmux attach-session -t "$SESSION"
+fi

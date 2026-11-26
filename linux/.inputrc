@@ -1,0 +1,13 @@
+$include /etc/inputrc
+
+# Up/Down arrows search history matching what you already typed
+"\e[A": history-search-backward
+"\e[B": history-search-forward
+"\eOA": history-search-backward
+"\eOB": history-search-forward
+
+# Smarter, cleaner Tab completion
+set completion-ignore-case on
+set show-all-if-ambiguous on
+set colored-stats on
+set mark-symlinked-directories on
